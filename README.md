@@ -1,6 +1,6 @@
 # acmotion
-# Author: spgoal
-# Date: Sep. 13th, 2017
+### Author: spgoal
+### Date: Sep. 13th, 2017
 使用AC自动机原理，本质上为Trie树+KMP算法
 主要改进有以下几点：
 1. 删除一些常用AC库（如pyahocorasick)在树中存储大量与查找本身无关的数据的做法，提高树的简洁性；
