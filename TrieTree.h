@@ -28,7 +28,13 @@ public:
         start = piw.start;
         end = piw.end;
     }
+    bool operator() (PosInWord a, PosInWord b) {
+        if (a.start < b.start) return true;
+        if (a.start == b.start && a.end < b.end) return true;
+        return false;
+    }
 };
+
 
 template<class T>  
 class TrieTree  
@@ -43,10 +49,12 @@ public:
     bool Delete(T* str);//删除单词str  
     void PrintALL(bool seq_flag = false);//打印trie树中所有节点对应的单词  
     void PrintPre(T* str);//打印以str为前缀的单词  
+    void sort_tree(TrieTreeNode<T>* s);
     void SetFailedPointer();//设置匹配失效时的跳转指针  
     vector<PosInWord> MatchKMP(wstring str);//返回str中出现在该TrieTree中的单词个数  
     int bin_search(vector<int> v, int num);
     int update_pos_vector(vector<int> &bef_v, int start_pos);
+    vector<PosInWord> MatchNoWordlenKMP(wstring str);
     vector<PosInWord> MatchSequenceKMP(wstring str);
     vector<PosInWord> search(wstring str);//返回str中出现在该TrieTree中的单词个数  
     void Print(TrieTreeNode<T>* p, bool seq_flag = false);  
@@ -55,6 +63,7 @@ public:
     void Destroy(SimTrieTreeNode* p);
     int value_index(TrieTreeNode<T>* p, T c, bool seq_flag = false);
     int value_index(SimTrieTreeNode* p, T c);
+    int value_index_bs(SimTrieTreeNode* p, T c); // bin search value index
     void write(char* file_name);
     void write_file(TrieTreeNode<T>* p, FILE* in_file);
     void write_struct(char* file_name);
@@ -112,7 +121,8 @@ void TrieTree<T>::Destroy(SimTrieTreeNode* p)
     int i = 0;
     while (true) {
         SimTrieTreeNode* sttn = sim_root + p->get_vid() + i;
-        if (sttn->get_isEnd()) break;
+        //if (sttn->get_isEnd()) break;
+        if (i == p->get_vsz() - 1) break;
         Destroy(sttn);
         i++;
     }
@@ -192,8 +202,26 @@ int TrieTree<T>::value_index(SimTrieTreeNode* p, T c) {
        if (int(cur_node->get_value()) == int(c))
            return i;
        i++;
-       if (cur_node->get_isEnd()) return -1;
+       //if (cur_node->get_isEnd()) return -1;
+       if (i == p->get_vsz() - 1) return -1;
    }
+}
+
+template<class T>
+int TrieTree<T>::value_index_bs(SimTrieTreeNode* p, T c) {
+   //printf("vid: %d, vsz: %d\n", p->get_vid(), p->get_vsz());
+   if (p->get_vid() == 0) return -1;
+   int s = 0, e = p->get_vsz();
+   while (s < e) {
+       int  m = (s + e) >> 1;
+       SimTrieTreeNode* cur_node = sim_root + p->get_vid() + m;
+       //printf("m: %d, valud: %d\n", m, cur_node->get_value());
+       if (int(cur_node->get_value()) == int(c))
+           return m;
+       else if (int(cur_node->get_value()) < int(c)) s = m + 1;
+       else e = m;
+   }
+   return -1;
 }
 
 template<class T>  
@@ -261,7 +289,7 @@ void TrieTree<T>::Print(TrieTreeNode<T>* p, bool seq_flag)
     if (p == NULL)  
         return;  
     int cur_fpid = seq_flag ? p->fpid : p->FailedPointer->ID;
-    printf("value:%d word:%d wordlen:%d vid:%d vsz:%d fpid:%d\n", p->value, p->word, p->wordlen, p->vid, p->vsz, cur_fpid);
+    printf("value:%d word:%d wordlen:%d vid:%d vsz:%d fpid:%d\n", p->value, p->word, p->wordlen, p->vid, p->ChildNodes.size(), cur_fpid);
     int sz = seq_flag ? p->vsz : p->ChildNodes.size();
     for (int i = 0; i < sz; i++)  
     {  
@@ -283,13 +311,14 @@ void TrieTree<T>::Print(SimTrieTreeNode* p)
     max_vid = (max_vid < p->get_vid()) ? p->get_vid() : max_vid;
     //max_vsz = (max_vsz < p->get_vsz()) ? p->get_vsz() : max_vsz;
     max_fpid = (max_fpid < p->get_fpid()) ? p->get_fpid() : max_fpid;
-    //printf("value:%d wordlen:%d vid:%d vsz:%d fpid:%d\n", p->value, p->wordlen, p->vid, p->vsz, p->fpid);
+    printf("value:%d wordlen:%d vid:%d vsz:%d fpid:%d\n", p->get_value(), p->get_wordlen(), p->get_vid(), p->get_vsz(), p->get_fpid());
     if (p->get_vid() == 0) return;
     int i = 0;
     while (true) {
         SimTrieTreeNode* cur_p = sim_root + p->get_vid() + i;
         if (cur_p) Print(cur_p);
-        if (cur_p->get_isEnd()) break;
+        //if (cur_p->get_isEnd()) break;
+        if (i == p->get_vsz() - 1) break;
         i++;
     } 
 }  
@@ -341,9 +370,9 @@ vector<PosInWord> TrieTree<T>::MatchKMP(wstring str)
                 node = node->FailedPointer;  
         }  
     }  
-    // 去重
-    vector<PosInWord>::iterator vit = unique(seq_list.begin(), seq_list.end());
-    seq_list.resize(distance(seq_list.begin(), vit));
+    //// 去重
+    //vector<PosInWord>::iterator vit = unique(seq_list.begin(), seq_list.end());
+    //seq_list.resize(distance(seq_list.begin(), vit));
     return seq_list;  
 }  
   
@@ -421,7 +450,7 @@ int TrieTree<T>::update_pos_vector(vector<int> &path_id, int start_pos) {
 }
 
 template<class T>  
-vector<PosInWord> TrieTree<T>::MatchSequenceKMP(wstring str)  
+vector<PosInWord> TrieTree<T>::MatchNoWordlenKMP(wstring str)  
 {  
     vector<PosInWord> seq_list;
     PosInWord* piw;
@@ -478,10 +507,69 @@ vector<PosInWord> TrieTree<T>::MatchSequenceKMP(wstring str)
             }
         }  
     }  
-    // 去重
-    vector<PosInWord>::iterator vit = unique(seq_list.begin(), seq_list.end());
-    seq_list.resize(distance(seq_list.begin(), vit));
+    //// 去重
+    //PosInWord spiw;
+    //sort (seq_list.begin(), seq_list.end(), spiw);
+    //vector<PosInWord>::iterator vit = unique(seq_list.begin(), seq_list.end());
+    //seq_list.resize(distance(seq_list.begin(), vit));
     return seq_list;  
+}  
+
+template<class T>  
+vector<PosInWord> TrieTree<T>::MatchSequenceKMP(wstring str)  
+{  
+    vector<PosInWord> seq_list;
+    PosInWord* piw;
+    int count = 0;//str中出现的TrieTree中的单词个数  
+    wstring p(str);//str中指针  
+    SimTrieTreeNode* node = sim_root;//TrieTree的节点指针  
+    int start_pos = 0; //记录初始位置
+    int rank = 0;
+    while (p[rank])  
+    {  
+        //printf("rank: %d, word: %d\n", rank, p[rank]);
+        int index = value_index_bs(node, p[rank]);
+        if (0 <= index)//当前字符匹配成功  
+        {  
+            SimTrieTreeNode* temp_bef = sim_root + node->get_vid() + index;
+            SimTrieTreeNode* temp = sim_root + temp_bef->get_fpid();
+            rank++;
+            while (temp != sim_root) //在匹配的情况下，仍然沿FailedPointer搜索，可检索出所有模式。  
+            {  
+                if (temp->get_isWord())  
+                {  
+                    count++;  
+                    piw = new PosInWord();
+                    piw->start = rank - temp->get_wordlen();
+                    piw->end = rank;
+                    //printf("start: %d, end: %d\n", piw->start, piw->end);
+                    seq_list.push_back(*piw);
+                }  
+                temp = sim_root + temp->get_fpid();  
+            }  
+            node = sim_root + node->get_vid() + index;  
+            if (node->get_isWord())  
+            {  
+                count++;  
+                piw = new PosInWord();
+                piw->start = rank - node->get_wordlen();
+                piw->end = rank;
+                //printf("start: %d, end: %d\n", piw->start, piw->end);
+                seq_list.push_back(*piw);
+            }  
+        }  
+        else//失配，跳转  
+        {  
+            if (node == sim_root) rank++;
+            else node = sim_root + node->get_fpid();  
+        }  
+    }  
+    //// 去重
+    //PosInWord spiw;
+    //sort(seq_list.begin(), seq_list.end(), spiw);
+    //vector<PosInWord>::iterator vit = unique(seq_list.begin(), seq_list.end());
+    //seq_list.resize(distance(seq_list.begin(), vit));
+    return seq_list;
 }  
 
 template<class T>  
@@ -492,9 +580,19 @@ vector<PosInWord> TrieTree<T>::search(wstring str)
     return MatchSequenceKMP(str); 
 }  
 
+template<class T>
+void TrieTree<T>::sort_tree(TrieTreeNode<T>* s) {
+    if (s->ChildNodes.size() <= 0) return;
+    TrieTreeNode<T> ttn;
+    sort(s->ChildNodes.begin(), s->ChildNodes.end(), ttn);
+    for (int i = 0; i < s->ChildNodes.size(); i++)
+        sort_tree(s->ChildNodes[i]);
+}
+
 template<class T>  
-void TrieTree<T>::SetFailedPointer()  
-{  
+void TrieTree<T>::SetFailedPointer() 
+{ 
+    sort_tree(root);
     queue<TrieTreeNode<T>*> q;  
     q.push(root);  
     while (!q.empty())  
@@ -629,12 +727,14 @@ void TrieTree<T>::write_struct(char* file_name) {
         SimTrieTreeNode* cur_point = all_points + cur_rank;
         if (0 < qf->ChildNodes.size())
             cur_point->set_vid(ap_rank);
-        //cur_point->set_vsz(qf->ChildNodes.size());
+        cur_point->set_vsz(qf->ChildNodes.size());
         id_addr[qf->ID] = (long long)cur_point;
         cur_point->set_fpid( (id_addr[qf->FailedPointer->ID] - (long long)all_points) / sizeof(SimTrieTreeNode) );
         q.pop();
-        //printf("vid:%d vsz:%d cur_rank:%d ap_rank:%d fpid: %d\n", cur_point->vid, cur_point->vsz, cur_rank, ap_rank, cur_point->fpid);
+        //printf("vid:%d vsz:%d cur_rank:%d ap_rank:%d fpid: %d\n", cur_point->get_vid(), cur_point->get_vsz(), cur_rank, ap_rank, cur_point->get_fpid());
         cur_rank++;
+        //TrieTreeNode<T> ttn;
+        //sort(qf->ChildNodes.begin(), qf->ChildNodes.end(), ttn);
         for (int i = 0; i < qf->ChildNodes.size(); i++) {
             if (i == qf->ChildNodes.size() - 1)
                 qf->ChildNodes[i]->isEnd = true;
@@ -651,9 +751,9 @@ void TrieTree<T>::write_struct(char* file_name) {
 template <class T>
 void TrieTree<T>::copy_struct(SimTrieTreeNode* ap, TrieTreeNode<T>* bp) {
     ap->set_value( bp->value );
-    //ap->set_wordlen( bp->wordlen );
+    ap->set_wordlen( bp->wordlen );
     ap->set_isWord( bp->wordlen );
-    ap->set_isEnd( bp->isEnd );
+    //ap->set_isEnd( bp->isEnd );
 }
 
 template <class T>

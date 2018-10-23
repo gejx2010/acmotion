@@ -55,9 +55,11 @@ int main()
     TrieTree<wchar_t>* nt = new TrieTree<wchar_t>();
     clock_t start_time = clock();
     //nt->load_struct("cur_byte.txt", nt);
-    nt->load_struct("../tree_tupu/book_tree");
+    printf("Before load.\n");
+    nt->load_struct("cur_byte.txt");
+    //nt->load_struct("../tree_tupu/book_tree");
     printf("load dict need time: %f\n", ((float)clock() - start_time) / CLOCKS_PER_SEC);
-    //nt->PrintALL();  
+    nt->PrintALL();  
     //cout << "max_value:" << nt->max_value << endl;
     //cout << "max_wordlen:" << nt->max_wordlen << endl;
     //cout << "max_vid:" << nt->max_vid << endl;
@@ -65,9 +67,9 @@ int main()
     //cout << "max_fpid:" << nt->max_fpid << endl;
     //cout << endl << "匹配结果为:" << endl;  
     
-    vector<PosInWord>  nql;
+    vector<PosInWord> nql;
     wchar_t* ss = L"龟鳖高效养殖技术图解与实例";
-    nql = nt->search(ss);  
+    nql = nt->search(s); 
     cout << "共匹配" << nql.size() << "处模式串" << endl;  
     for (int i = 0; i < nql.size(); i++) {
         cout << nql[i].start << "," << nql[i].end << endl;
