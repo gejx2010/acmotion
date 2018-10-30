@@ -1,6 +1,6 @@
 obj=acmotion.so acmotion
 all: $(obj)
-.PHONE: all
+.PHONY: all
 CC=g++
 CINCLUDES=-I /usr/local/include -I /usr/local/include/python3.5m/ -I /usr/include
 CLIBS=-L /usr/lib -lboost_python35
@@ -13,6 +13,6 @@ acmotion.so: $(FILES)
 acmotion: $(FILES)
 	$(CC) -g -o acmotion -FPIC $(FILES) $(CINCLUDES) $(CLIBS_2)
 
-.PHONE: clean
+.PHONY: clean
 clean:
 	-$(RM) $(obj)
