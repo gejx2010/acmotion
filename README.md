@@ -1,5 +1,10 @@
 # acmotion
 ### Author: spgoal
+
+## 安装依赖
+项目编译成python库需要依赖boost，根据python版本和系统的不同需要自行编辑Makefile或者make.sh(linux执行脚本for python3)或者make_python2.sh(linux执行脚本for python2)
+
+## 修改日志
 ### Date: Sep. 13th, 2017
 使用AC自动机原理，本质上为Trie树+KMP算法
 主要改进有以下几点：
